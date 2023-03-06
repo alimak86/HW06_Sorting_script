@@ -66,7 +66,10 @@ def sanitize_transl(name):
 
 def split_filename(filename):  # split filename into two words name and extention
     dot_index = filename.rfind(".")
-    return [filename[0:dot_index], filename[dot_index+1:len(filename)]]
+    if dot_index > 0:
+        return [filename[0:dot_index], filename[dot_index+1:len(filename)]]
+    else:
+        return [filename, "noext"]
 
 # create main folders video, audio etc in case if nothing in the folder dir_name
 
@@ -78,9 +81,11 @@ def create_main_folders(dir_name):
     main_folders = [VIDEO, AUDIO, IMAGES,
                     DOCS, ARCHIVES, OTHER]
     os.chdir(dir_name)  # make folder current
-    print("-----------------------------------------------------------------------")
+    print(
+        "-----------------------------------------------------------------------")
     print("List of the existing main folders folders:")
-    print("-----------------------------------------------------------------------")
+    print(
+        "-----------------------------------------------------------------------")
 
     for folder in main_folders:
         # check if a main folder is in the current directory
@@ -91,12 +96,15 @@ def create_main_folders(dir_name):
         else:
             print("{:<16}".format(folder))
 
-    print("-----------------------------------------------------------------------")
+    print(
+        "-----------------------------------------------------------------------")
     print("List of created main folders:")
-    print("-----------------------------------------------------------------------")
+    print(
+        "-----------------------------------------------------------------------")
     for folder in list:
         print("{:<16}".format(folder))
-    print("-----------------------------------------------------------------------")
+    print(
+        "-----------------------------------------------------------------------")
     return list
 
 # output files from the file list corresponding type NAME
@@ -105,10 +113,12 @@ def create_main_folders(dir_name):
 def output_files(file_list, NAME):
     # print("-----------------------------------------------------------------------")
     print(NAME)
-    print("-----------------------------------------------------------------------")
+    print(
+        "-----------------------------------------------------------------------")
     for file in file_list:
         print("{:<16}".format(file))
-    print("-----------------------------------------------------------------------")
+    print(
+        "-----------------------------------------------------------------------")
 
 # create a list of folders and files in the directory dir_name
 
@@ -162,22 +172,28 @@ def list_folder(dir_name):  #
     dict_files = {VIDEO: video_files, AUDIO: audio_files, IMAGES: images_files,
                   DOCS: docs_files, ARCHIVES: archieves_files, OTHER: other_files}
 
-    print("\n\nDate:" + str(datetime.date.today()))  # print date
+    # print date
+    print("\n\nDate:" + str(datetime.date.today()))
     print("current folder:", dir_name)
-    print("-----------------------------------------------------------------------\n")
+    print(
+        "-----------------------------------------------------------------------\n")
     print("List of files:")
-    print("-----------------------------------------------------------------------")
+    print(
+        "-----------------------------------------------------------------------")
     for NAME in dict_files:
         # output all files found coresponding type NAME
         output_files(dict_files[NAME], NAME)
     print("Total files")
-    print("-----------------------------------------------------------------------")
+    print(
+        "-----------------------------------------------------------------------")
     for ext in count_files:
         print("{:<16}{:<16}".format(ext, count_files[ext]))
 
-    print("-----------------------------------------------------------------------")
+    print(
+        "-----------------------------------------------------------------------")
     print("List of folders:")
-    print("-----------------------------------------------------------------------")
+    print(
+        "-----------------------------------------------------------------------")
     for folder in folders:
         print("{:<16}".format(folder))
     return [{VIDEO: video_files, AUDIO: audio_files, IMAGES: images_files, DOCS: docs_files, ARCHIVES: archieves_files, OTHER: other_files}, folders]
@@ -231,7 +247,7 @@ def move_files_in_folder(dir_name, files_dict):
 # in the current folder including all subfolders
 
 
-def files_in_the_folder(folder):
+def files_in_the_folder(folder):  # not required
     p = Path(folder)
     list = []  # list of folders in the current folder
     count = 0
@@ -251,7 +267,7 @@ def files_in_the_folder(folder):
         return count
 
 
-def destroy_empty_folders(dir_name, folders):
+def destroy_empty_folders(dir_name, folders):  # not required
     os.chdir(dir_name)  # set up current directory for work
     destroyed = []
     for folder in folders:
@@ -260,12 +276,12 @@ def destroy_empty_folders(dir_name, folders):
             try:
                 os.rmdir(folder)
                 destroyed.append(folder)
-            finally:  # if something happens during destruction of the folder will tell
+            except OSError:  # if something happens during destruction of the folder will tell
                 print(f"can not destroy folder {folder}")
     return destroyed
 
 
-def rename_folders(dir_name, folders):
+def rename_folders(dir_name, folders):  # is not required at all
     os.chdir(dir_name)  # set up current directory for work
     count = 0  # folders renamed
     for folder in folders:
@@ -300,8 +316,89 @@ def unpack_archives(dir_name, archive_list):
     print("Total unpacked:{:<16}".format(len(archive_list)))
 
 
-def dir(dir_name):  # output all file and folders in the directory dir_name
+def create_filelist(folder):
+    # create file list of all subfolders
+    p = Path(folder)
+    folderlist = []  # list of folders in the current folder
+    filelist = []  # list of file names in the current folder + subfolders
 
+    for obj in p.iterdir():
+        if obj.is_dir():
+            # append all the subfolders of the folder
+            folderlist.append(obj.name)
+
+    for subfolder in folderlist:
+        # else calculate files in the subfolders
+        filelist += filelist_in_the_folder(folder + "\\" + subfolder)
+    return filelist
+
+
+def filelist_in_the_folder(folder):
+    p = Path(folder)
+    folderlist = []  # list of folders in the current folder
+    filelist = []  # list of file names in the current folder + subfolders
+
+    for obj in p.iterdir():
+        if obj.is_dir():
+            # append all the subfolders of the folder
+            folderlist.append(obj.name)
+        else:
+            # if not directory, so filename count
+            filelist.append(folder + "\\" + obj.name)
+ # return [count, list]
+    if folderlist == []:  # if list is empty means no subfolders so return list of files
+        return filelist
+    else:
+        for dir in folderlist:
+            # else calculate files in the subfolders
+            filelist += filelist_in_the_folder(folder + "\\" + dir)
+        return filelist
+
+
+def copy_filelist_to_directory(dir_name, filelist):
+    # move all files from the filelist to directory
+    os.chdir(dir_name)  # dir_name make current
+    for file in filelist:
+        split = file.split("\\")
+        name = split[len(split)-1]
+        try:
+            shutil.copy2(file, name)
+            # os.remove(file)
+        except PermissionError:  # if something happens during the moving then will tell
+            print(f"can not copy file:{file}")
+        except shutil.SameFileError:  # if something happens during the moving then will tell
+            print(f"same filename:{file}")
+
+
+def clean(folder):
+    # remove all files and subfolders in the current folder
+    folderlist = []
+
+    p = Path(folder)
+    for obj in p.iterdir():
+        if obj.is_dir():
+            # append all the subfolders of the folder
+            folderlist.append(obj.name)
+        else:
+            try:
+                os.remove(folder + "\\" + obj.name)  # remove files
+            except PermissionError:
+                print(f"can not remove {obj.name}")
+            except FileNotFoundError:
+                print(f"can not find {obj.name}")
+
+    if folderlist == []:  # if list is empty means no subfolders so return list of files
+        return 0
+    else:
+        for dir in folderlist:
+            clean(folder + "\\" + dir)
+            try:
+                os.rmdir(folder + "\\" + dir)  # remove after cleaning
+            except OSError:
+                print(f"{folder} is not empty")
+
+
+def dir(dir_name):  # sort all file in the dir_name into main folders - all other folders already trashed
     # list out all the files and folders of the folder
     list = list_folder(dir_name)
     files_dict = list[0]  # get files dictionary
@@ -310,34 +407,39 @@ def dir(dir_name):  # output all file and folders in the directory dir_name
     create_main_folders(dir_name)
     move_files_in_folder(dir_name, files_dict)
     destroyed = destroy_empty_folders(dir_name, folders)
-    print("-----------------------------------------------------------------------")
-    print("Folders destroyed: {:<16}".format(len(destroyed)))
-    renamed = rename_folders(dir_name, folders)
     print(
         "-----------------------------------------------------------------------")
-    print("Folders renamed: {:<16}".format(renamed))
-    print("-----------------------------------------------------------------------")
+    print("Folders destroyed: {:<16}".format(len(destroyed)))
+    print(
+        "-----------------------------------------------------------------------")
     unpack_archives(dir_name, files_dict[ARCHIVES])  # unpack archive
 
+
+def clean_folders(dir_name):  # delete all subfolders of the folder dir_name
     p = Path(dir_name)
     for obj in p.iterdir():  # arrange the rest of the folders
         if obj.is_dir():  # check if the object is a folder
-            # we get every folder except main folders
-            if obj.name not in (VIDEO, AUDIO, DOCS, IMAGES, ARCHIVES, OTHER):
-                # lets go to clean other folders
-                dir(dir_name + "\\" + obj.name)
+            clean(dir_name + "\\" + obj.name)
 
 
+if __name__ == "__main__":
+    main_directory = sys.argv[1]
+    # create filelist of all files in the current folders and subfolders
+    filelist = create_filelist(main_directory)
+    # copy all the files into the current directory
+    copy_filelist_to_directory(main_directory, filelist)
+    clean_folders(main_directory)  # clean all subfolders
+    dir(main_directory)  # sort all of them out
+
+    # clean("D:\python")
+    # dir(sys.argv[1])
 # os.rmdir("D:\python\delete")
-dir(sys.argv[1])
 # word = "namelsfi3u47r923rc9823uo324rudlqw=-0=-0=*%345#%#$ f2гпмцщтащуцйшкгеуйцза цзфако укзщш 234ir243 ro243r32r-3 r32ru93hr9823yr913jhr9hr,.posipf /s,pkcpe,c725472143812498n qdh01328y ..... dta"
 # print(split_filename(word))
 # print(word)
 # print(sanitize_transl(word))
 # print(word)
 # print(normilize(word))
-
 # os.chdir("D:\python")
 # print(files_in_the_folder("test"))
-
 # copy_files(["lettre_example.pdf"], "video")
