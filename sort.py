@@ -4,6 +4,7 @@ import os  # for working with files and folders
 import re  # for working with the strings
 import shutil  # working with the files and folders
 import sys  # use for the program arguments
+import _osx_support
 
 
 # define variables requred for the main folders used for the arrangement
